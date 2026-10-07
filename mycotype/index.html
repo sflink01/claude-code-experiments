@@ -1,0 +1,771 @@
+<title>Mycotype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Archivo+Black&family=Bebas+Neue&family=Dancing+Script:wght@600&family=EB+Garamond:ital,wght@0,500;1,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Pinyon+Script&family=Work+Sans:wght@500&family=Zilla+Slab:wght@600&display=swap">
+<style>
+/* Layout: specimen bench. A narrow rail of controls on the left, the specimen stage filling the rest. Stacks on phones. */
+:root {
+  --bg: #ebe7df;
+  --rail: #e1dcd1;
+  --line: #cbc3b4;
+  --fg: #1d1a15;
+  --muted: #6a6253;
+  --accent: #4f5a2b;
+  --accent-fg: #f3f1e8;
+  --field: #f5f2eb;
+  --paper: #fbfaf6;
+  --soil: #1a1815;
+  --check-a: #f4f2ec;
+  --check-b: #dedad1;
+  --ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --display: "EB Garamond", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161512; --rail: #1e1c18; --line: #36322b; --fg: #e9e4d9; --muted: #9a917f;
+    --accent: #a4af6a; --accent-fg: #171611; --field: #24211c;
+    --check-a: #2a2723; --check-b: #211f1b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161512; --rail: #1e1c18; --line: #36322b; --fg: #e9e4d9; --muted: #9a917f;
+  --accent: #a4af6a; --accent-fg: #171611; --field: #24211c;
+  --check-a: #2a2723; --check-b: #211f1b; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 14px; }
+* { box-sizing: border-box; }
+
+.app { display: grid; grid-template-columns: 340px minmax(0, 1fr); min-height: 100%; }
+.rail { background: var(--rail); border-right: 1px solid var(--line); padding: 20px 20px 32px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; max-height: 100vh; position: sticky; top: 0; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.brand h1 { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 30px; margin: 0; letter-spacing: -0.01em; }
+.brand span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+label.field-label, .group h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin: 0; }
+textarea, select, input[type="number"], input[type="text"] {
+  font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; width: 100%;
+}
+textarea { font-family: var(--display); font-size: 22px; line-height: 1.15; resize: vertical; min-height: 70px; }
+textarea:focus-visible, select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.group { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.group-head { display: flex; justify-content: space-between; align-items: baseline; }
+.group-head p { margin: 0; font-size: 12px; color: var(--muted); }
+
+.row { display: grid; grid-template-columns: 1fr auto 26px; align-items: center; gap: 4px 8px; }
+.row .name { font-size: 13px; }
+.row output { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+.row input[type="range"] { grid-column: 1 / 3; width: 100%; accent-color: var(--accent); margin: 0; }
+.row .lock { grid-row: 1 / 3; grid-column: 3; }
+.row.select-row { grid-template-columns: 1fr 26px; }
+.row.select-row select { grid-column: 1; }
+.row.select-row .lock { grid-row: 1 / 3; grid-column: 2; align-self: end; margin-bottom: 6px; }
+
+.lock { width: 26px; height: 26px; border: 1px solid transparent; background: none; border-radius: 4px; color: var(--muted); display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0.55; }
+.lock:hover { opacity: 1; border-color: var(--line); }
+.lock[aria-pressed="true"] { opacity: 1; color: var(--accent); border-color: var(--accent); }
+.lock svg { width: 14px; height: 14px; }
+
+.seed-row { display: grid; grid-template-columns: 1fr auto 26px; gap: 8px; align-items: center; }
+
+button.btn { font: inherit; font-weight: 500; border-radius: 4px; padding: 8px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--field); color: var(--fg); }
+button.btn:hover { border-color: var(--muted); }
+button.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button.btn:disabled { opacity: 0.5; cursor: progress; }
+
+.stage-wrap { display: flex; flex-direction: column; min-width: 0; padding: 20px 24px 24px; gap: 14px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: inherit; font-size: 12px; background: var(--field); color: var(--muted); border: 0; padding: 7px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+.stage { flex: 1; min-height: 360px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; padding: 24px; position: relative; overflow: hidden; }
+.stage.bg-paper { background: var(--paper); }
+.stage.bg-soil { background: var(--soil); }
+.stage.bg-clear { background-color: var(--check-a); background-image: conic-gradient(var(--check-b) 25%, transparent 0 50%, var(--check-b) 0 75%, transparent 0); background-size: 18px 18px; }
+#view { max-width: 100%; max-height: 100%; display: block; }
+.busy { position: absolute; top: 10px; right: 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--field); border: 1px solid var(--line); padding: 3px 8px; border-radius: 3px; }
+
+.export { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.export .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.export .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.export select { width: auto; padding: 7px 8px; }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+.note.err { color: var(--fg); }
+
+.presets { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.presets .full { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.presets .full .btn { font-size: 12px; padding: 6px 10px; }
+.ink { display: flex; align-items: center; gap: 10px; }
+.ink input[type="color"] { width: 36px; height: 28px; border: 1px solid var(--line); border-radius: 4px; padding: 2px; background: var(--field); }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .rail { position: static; max-height: none; order: 2; border-right: 0; border-top: 1px solid var(--line); padding: 20px 16px 32px; }
+  .stage-wrap { order: 1; padding: 16px; }
+  .stage { min-height: 240px; padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="rail" aria-label="Controls">
+    <div class="brand"><h1>Mycotype</h1><span>specimen no. <span id="seedTag">0</span></span></div>
+
+    <div class="stack">
+      <label class="field-label" for="text">Text</label>
+      <textarea id="text" rows="2" spellcheck="false">Mycelium</textarea>
+    </div>
+
+    <div class="group" id="g-type"><div class="group-head"><h2>Type</h2></div></div>
+    <div class="group" id="g-form"><div class="group-head"><h2>Form</h2><p>bending and edges</p></div></div>
+    <div class="group" id="g-decay"><div class="group-head"><h2>Decay</h2><p>rot, pores, crumbling</p></div></div>
+    <div class="group" id="g-growth"><div class="group-head"><h2>Growth</h2><p>hyphae, caps, spores</p></div></div>
+    <div class="group" id="g-char">
+      <div class="group-head"><h2>Character</h2></div>
+      <div class="seed-row">
+        <input type="number" id="seed" min="0" max="999999" step="1" aria-label="Seed">
+        <button class="btn" id="newSeed" type="button">New seed</button>
+        <button class="lock" type="button" data-lock="seed" aria-pressed="false" aria-label="Lock seed when randomizing"></button>
+      </div>
+      <p class="note">The seed sets the random pattern. Same seed and settings give the same result every time.</p>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><h2>Presets</h2><p>saved in this browser</p></div>
+      <div class="presets">
+        <select id="presetList" aria-label="Saved presets"><option value="">No presets yet</option></select>
+        <button class="btn" id="loadPreset" type="button">Load</button>
+        <input type="text" id="presetName" placeholder="Name this look" aria-label="Preset name">
+        <button class="btn" id="savePreset" type="button">Save</button>
+        <div class="full">
+          <button class="btn" id="deletePreset" type="button">Delete selected</button>
+          <button class="btn" id="exportPresets" type="button">Back up presets</button>
+          <label class="btn" for="importPresets" style="cursor:pointer">Restore backup</label>
+          <input type="file" id="importPresets" accept=".json,application/json" hidden>
+        </div>
+      </div>
+      <p class="note" id="presetNote"></p>
+    </div>
+  </aside>
+
+  <main class="stage-wrap">
+    <div class="toolbar">
+      <button class="btn primary" id="randomize" type="button">Randomize</button>
+      <button class="btn" id="reset" type="button">Reset</button>
+      <span class="spacer"></span>
+      <div class="ink"><label class="field-label" for="ink">Ink</label><input type="color" id="ink" value="#000000"></div>
+      <div class="seg" role="group" aria-label="Preview background">
+        <button type="button" data-bg="paper" aria-pressed="true">Paper</button>
+        <button type="button" data-bg="soil" aria-pressed="false">Dark</button>
+        <button type="button" data-bg="clear" aria-pressed="false">Transparent</button>
+      </div>
+    </div>
+
+    <div class="stage bg-paper" id="stage">
+      <canvas id="view" aria-label="Distorted text preview"></canvas>
+      <div class="busy" id="busy" hidden>growing…</div>
+    </div>
+
+    <div class="export">
+      <div class="meta" id="meta">—</div>
+      <div class="actions">
+        <label class="field-label" for="exportSize">PNG size</label>
+        <select id="exportSize">
+          <option value="2400">2400 px long edge</option>
+          <option value="3600" selected>3600 px · A4 width at 300 dpi</option>
+          <option value="5000">5000 px · A3 width at 300 dpi</option>
+        </select>
+        <button class="btn primary" id="download" type="button">Download PNG</button>
+      </div>
+    </div>
+    <p class="note" id="dlNote">The background is only for previewing. The PNG is always transparent.</p>
+  </main>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- definitions ----------
+const FONTS = [
+  { id: "garamond", label: "Garamond (serif)", family: "EB Garamond", weight: 500 },
+  { id: "garamond-i", label: "Garamond italic (serif)", family: "EB Garamond", weight: 500, style: "italic" },
+  { id: "zilla", label: "Zilla Slab (slab)", family: "Zilla Slab", weight: 600 },
+  { id: "alfa", label: "Alfa Slab One (heavy slab)", family: "Alfa Slab One", weight: 400 },
+  { id: "work", label: "Work Sans (sans)", family: "Work Sans", weight: 500 },
+  { id: "archivo", label: "Archivo Black (heavy sans)", family: "Archivo Black", weight: 400 },
+  { id: "bebas", label: "Bebas Neue (condensed)", family: "Bebas Neue", weight: 400 },
+  { id: "dancing", label: "Dancing Script (cursive)", family: "Dancing Script", weight: 600 },
+  { id: "pinyon", label: "Pinyon Script (formal cursive)", family: "Pinyon Script", weight: 400 },
+];
+
+const SLIDERS = [
+  { key: "tracking", group: "g-type", label: "Letter spacing", min: -0.1, max: 0.4, step: 0.01, def: 0.02 },
+  { key: "weight", group: "g-type", label: "Weight", min: -1, max: 1, step: 0.01, def: 0 },
+  { key: "warp", group: "g-form", label: "Organic warp", min: 0, max: 1, step: 0.01, def: 0.25 },
+  { key: "rough", group: "g-form", label: "Edge roughness", min: 0, max: 1, step: 0.01, def: 0.3 },
+  { key: "erosion", group: "g-decay", label: "Erosion", min: 0, max: 1, step: 0.01, def: 0.2 },
+  { key: "pitting", group: "g-decay", label: "Pitting", min: 0, max: 1, step: 0.01, def: 0.1 },
+  { key: "dissolve", group: "g-decay", label: "Dissolve", min: 0, max: 1, step: 0.01, def: 0 },
+  { key: "mycelium", group: "g-growth", label: "Mycelium threads", min: 0, max: 1, step: 0.01, def: 0.3 },
+  { key: "threadLength", group: "g-growth", label: "Thread length", min: 0, max: 1, step: 0.01, def: 0.4 },
+  { key: "branching", group: "g-growth", label: "Branching", min: 0, max: 1, step: 0.01, def: 0.45 },
+  { key: "fruiting", group: "g-growth", label: "Fruiting bodies", min: 0, max: 1, step: 0.01, def: 0.15 },
+  { key: "spores", group: "g-growth", label: "Spores", min: 0, max: 1, step: 0.01, def: 0.2 },
+  { key: "detail", group: "g-char", label: "Detail level", min: 0, max: 1, step: 0.01, def: 0.5 },
+];
+
+const DEFAULTS = { font: "zilla", seed: 4127 };
+SLIDERS.forEach(s => DEFAULTS[s.key] = s.def);
+
+let state = { ...DEFAULTS };
+const locks = new Set();
+
+// ---------- utilities ----------
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hash2(x, y, s) {
+  let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 982451653) | 0;
+  h = Math.imul(h ^ h >>> 13, 1274126177);
+  return ((h ^ h >>> 16) >>> 0) / 4294967296;
+}
+function makeNoise(seed) {
+  const r = mulberry32(seed), q = new Uint8Array(256), p = new Uint8Array(512);
+  for (let i = 0; i < 256; i++) q[i] = i;
+  for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = q[i]; q[i] = q[j]; q[j] = t; }
+  for (let i = 0; i < 512; i++) p[i] = q[i & 255];
+  const GX = [1, -1, 1, -1, 1.414, -1.414, 0, 0], GY = [1, 1, -1, -1, 0, 0, 1.414, -1.414];
+  function n(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, X = xi & 255, Y = yi & 255;
+    const u = xf * xf * xf * (xf * (xf * 6 - 15) + 10), v = yf * yf * yf * (yf * (yf * 6 - 15) + 10);
+    const aa = p[p[X] + Y] & 7, ab = p[p[X] + Y + 1] & 7, ba = p[p[X + 1] + Y] & 7, bb = p[p[X + 1] + Y + 1] & 7;
+    const d00 = GX[aa] * xf + GY[aa] * yf, d10 = GX[ba] * (xf - 1) + GY[ba] * yf;
+    const d01 = GX[ab] * xf + GY[ab] * (yf - 1), d11 = GX[bb] * (xf - 1) + GY[bb] * (yf - 1);
+    const a = d00 + u * (d10 - d00), b = d01 + u * (d11 - d01);
+    return a + v * (b - a);
+  }
+  function fbm(x, y, o) {
+    let s = 0, a = 1, t = 0;
+    for (let i = 0; i < o; i++) { s += a * n(x, y); t += a; x = x * 2.03 + 17.1; y = y * 2.03 + 9.7; a *= 0.5; }
+    return s / t;
+  }
+  return { n, fbm };
+}
+function boxBlur(a, w, h, r, passes) {
+  const t = new Float32Array(a.length), d = 2 * r + 1;
+  for (let p = 0; p < passes; p++) {
+    for (let y = 0; y < h; y++) {
+      const o = y * w; let s = 0;
+      for (let x = 0; x <= r && x < w; x++) s += a[o + x];
+      for (let x = 0; x < w; x++) {
+        t[o + x] = s / d;
+        const xa = x + r + 1, xr = x - r;
+        if (xa < w) s += a[o + xa];
+        if (xr >= 0) s -= a[o + xr];
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let s = 0;
+      for (let y = 0; y <= r && y < h; y++) s += t[y * w + x];
+      for (let y = 0; y < h; y++) {
+        a[y * w + x] = s / d;
+        const ya = y + r + 1, yr = y - r;
+        if (ya < h) s += t[ya * w + x];
+        if (yr >= 0) s -= t[yr * w + x];
+      }
+    }
+  }
+}
+function sample(F, w, h, x, y) {
+  if (x < 0 || y < 0 || x >= w - 1 || y >= h - 1) return 0;
+  const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi, i = yi * w + xi;
+  const a = F[i] + fx * (F[i + 1] - F[i]), b = F[i + w] + fx * (F[i + w + 1] - F[i + w]);
+  return a + fy * (b - a);
+}
+
+// ---------- layout ----------
+const fontById = id => FONTS.find(f => f.id === id) || FONTS[2];
+const fontCss = (f, px) => `${f.style || "normal"} ${f.weight} ${px}px "${f.family}"`;
+const measureCtx = document.createElement("canvas").getContext("2d");
+
+function lineWidth(ctx, line, px, track) {
+  if (!track) return ctx.measureText(line).width;
+  const chars = [...line];
+  let w = 0;
+  for (const c of chars) w += ctx.measureText(c).width;
+  return w + track * px * Math.max(0, chars.length - 1);
+}
+function layoutEm(p) {
+  const f = fontById(p.font), ref = 100;
+  measureCtx.font = fontCss(f, ref);
+  const lines = (p.text || "").split("\n");
+  let maxW = 0, asc = 0, desc = 0;
+  lines.forEach((ln, i) => {
+    maxW = Math.max(maxW, lineWidth(measureCtx, ln, ref, p.tracking) / ref);
+    const m = measureCtx.measureText(ln || "x");
+    if (i === 0) asc = m.actualBoundingBoxAscent / ref;
+    if (i === lines.length - 1) desc = m.actualBoundingBoxDescent / ref;
+  });
+  const lh = 1.08;
+  const leftOverhang = 0.1; // scripts and italics spill past their advance width
+  const textW = maxW + leftOverhang * 2;
+  const textH = asc + desc + (lines.length - 1) * lh;
+  const grow = p.mycelium > 0 ? 0.08 + p.threadLength * 0.7 : 0;
+  const margin = Math.min(1.1, 0.2 + Math.max(grow, p.spores > 0 ? 0.25 : 0, p.fruiting > 0 ? 0.25 : 0) + p.warp * 0.2 + Math.max(0, p.weight) * 0.06);
+  return { lines, asc, lh, textW, textH, margin, W: textW + margin * 2, H: textH + margin * 2 };
+}
+
+// ---------- the renderer ----------
+function render(p, longEdge) {
+  const L = layoutEm(p);
+  const S = longEdge / Math.max(L.W, L.H);
+  const w = Math.max(2, Math.round(L.W * S)), h = Math.max(2, Math.round(L.H * S));
+  const f = fontById(p.font);
+
+  // 1. letterforms as a mask
+  const mc = document.createElement("canvas"); mc.width = w; mc.height = h;
+  const m = mc.getContext("2d", { willReadFrequently: true });
+  m.font = fontCss(f, S); m.textBaseline = "alphabetic"; m.fillStyle = "#fff"; m.strokeStyle = "#fff"; m.lineJoin = "round";
+  const drawLines = (mode) => {
+    L.lines.forEach((ln, i) => {
+      const lw = lineWidth(m, ln, S, p.tracking);
+      let x = (w - lw) / 2;
+      const y = L.margin * S + L.asc * S + i * L.lh * S;
+      if (!p.tracking) { mode === "fill" ? m.fillText(ln, x, y) : m.strokeText(ln, x, y); return; }
+      for (const c of ln) {
+        mode === "fill" ? m.fillText(c, x, y) : m.strokeText(c, x, y);
+        x += m.measureText(c).width + p.tracking * S;
+      }
+    });
+  };
+  drawLines("fill");
+  if (p.weight > 0) { m.lineWidth = p.weight * S * 0.07; drawLines("stroke"); }
+  if (p.weight < 0) { m.globalCompositeOperation = "destination-out"; m.lineWidth = -p.weight * S * 0.05; drawLines("stroke"); m.globalCompositeOperation = "source-over"; }
+
+  const src = m.getImageData(0, 0, w, h).data;
+  const N = w * h;
+  const B = new Float32Array(N), B2 = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const a = src[i * 4 + 3] / 255; B[i] = a; B2[i] = a; }
+
+  // 2. soft fields: a narrow one for edges, a wide one for "depth inside the letter"
+  const rb = Math.max(1, Math.round(S * (0.01 + 0.045 * p.rough)));
+  boxBlur(B, w, h, rb, 2);
+  boxBlur(B2, w, h, Math.max(2, Math.round(S * 0.03)), 2);
+
+  const noise = makeNoise(p.seed);
+  const det = p.detail;
+
+  // 3. warp field on a coarse grid
+  const gs = Math.max(2, Math.round(S * 0.015));
+  const gw = Math.ceil(w / gs) + 2, gh = Math.ceil(h / gs) + 2;
+  const DX = new Float32Array(gw * gh), DY = new Float32Array(gw * gh);
+  if (p.warp > 0) {
+    const fw = 0.9 + det * 1.6, amp = p.warp * S * 0.2;
+    for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+      const ux = gx * gs / S * fw, uy = gy * gs / S * fw;
+      DX[gy * gw + gx] = amp * noise.fbm(ux, uy, 3);
+      DY[gy * gw + gx] = amp * noise.fbm(ux + 43.2, uy + 11.7, 3);
+    }
+  }
+
+  // 4. per-pixel decay
+  const out = new ImageData(w, h), od = out.data, V = new Float32Array(N);
+  const ink = hexToRgb(p.ink || "#000000");
+  const k = 2.2 * rb;
+  const fr = 5 + det * 22, fe = 1.4 + det * 3.5, fp = 9 + det * 26, gr = 110 + det * 220;
+  const roughA = p.rough * 0.55, eroT = 1 - p.erosion * 0.8, pitT = 0.86 - p.pitting * 0.26;
+  const dis = p.dissolve, seed = p.seed | 0;
+  for (let y = 0; y < h; y++) {
+    const gyf = y / gs, gy0 = gyf | 0, ty = gyf - gy0;
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      let sx = x, sy = y;
+      if (p.warp > 0) {
+        const gxf = x / gs, gx0 = gxf | 0, tx = gxf - gx0, gi = gy0 * gw + gx0;
+        const dx0 = DX[gi] + tx * (DX[gi + 1] - DX[gi]), dx1 = DX[gi + gw] + tx * (DX[gi + gw + 1] - DX[gi + gw]);
+        const dy0 = DY[gi] + tx * (DY[gi + 1] - DY[gi]), dy1 = DY[gi + gw] + tx * (DY[gi + gw + 1] - DY[gi + gw]);
+        sx += dx0 + ty * (dx1 - dx0); sy += dy0 + ty * (dy1 - dy0);
+      }
+      const v = sample(B, w, h, sx, sy);
+      V[i] = v;
+      const d2 = (v > 0.01 || dis > 0) ? sample(B2, w, h, sx, sy) : 0;
+      if (v < 0.01 && !(dis > 0 && d2 > 0.04)) continue;
+      const ux = sx / S, uy = sy / S;
+      const depth = clamp((d2 - 0.5) * 2, 0, 1);
+      let n = v - 0.5;
+      if (roughA > 0) n += roughA * noise.fbm(ux * fr + 100, uy * fr, 3);
+      if (p.erosion > 0) {
+        const e = 0.5 + 0.8 * noise.fbm(ux * fe + 200, uy * fe, 4) + (1 - depth) * 0.22;
+        if (e > eroT) n -= (e - eroT) * 14;
+      }
+      if (p.pitting > 0) {
+        const q = 0.5 + 0.6 * noise.n(ux * fp + 300, uy * fp);
+        if (q > pitT) n -= (q - pitT) * 22;
+      }
+      let a = clamp(0.5 + n * k, 0, 1);
+      if (dis > 0) {
+        const cx = Math.floor(ux * gr), cy = Math.floor(uy * gr);
+        const g = hash2(cx, cy, seed);
+        if (a > 0) {
+          const zone = dis * 0.95 * Math.pow(1 - depth, 1.6) + dis * 0.3 * noise.fbm(ux * 2.2 + 400, uy * 2.2, 2);
+          if (g < zone) a = 0;
+        } else if (d2 > 0.04 && d2 < 0.5) {
+          const t = d2 / 0.5;
+          if (hash2(cx, cy, seed + 7) < dis * 0.35 * t * t * t) a = 1;
+        }
+      }
+      if (a > 0) { const o = i * 4; od[o] = ink[0]; od[o + 1] = ink[1]; od[o + 2] = ink[2]; od[o + 3] = Math.round(a * 255); }
+    }
+  }
+
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  ctx.putImageData(out, 0, 0);
+
+  // 5. edge points for growth
+  const es = Math.max(1, Math.round(S * 0.012));
+  const edges = [];
+  const A = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : od[(y * w + x) * 4 + 3];
+  const Vat = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : V[y * w + x];
+  for (let y = es; y < h - es; y += es) for (let x = es; x < w - es; x += es) {
+    if (A(x, y) < 128) continue;
+    if (A(x + es, y) >= 128 && A(x - es, y) >= 128 && A(x, y + es) >= 128 && A(x, y - es) >= 128) continue;
+    let gx = Vat(x + es, y) - Vat(x - es, y), gy = Vat(x, y + es) - Vat(x, y - es);
+    const len = Math.hypot(gx, gy);
+    if (len < 1e-4) continue;
+    edges.push(x, y, -gx / len, -gy / len);
+  }
+  const ne = edges.length / 4;
+  const perimEm = ne * es / S;
+
+  ctx.fillStyle = p.ink || "#000"; ctx.strokeStyle = p.ink || "#000"; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (ne > 0) {
+    if (p.mycelium > 0) growMycelium(ctx, p, S, edges, ne, perimEm, noise);
+    if (p.fruiting > 0) growFruit(ctx, p, S, edges, ne, perimEm);
+    if (p.spores > 0) scatterSpores(ctx, p, S, edges, ne, perimEm);
+  }
+  return { canvas: c, S };
+}
+
+function pickEdge(R, edges, ne) { const j = Math.floor(R() * ne) * 4; return [edges[j], edges[j + 1], edges[j + 2], edges[j + 3]]; }
+
+function growMycelium(ctx, p, S, edges, ne, perimEm, noise) {
+  const R = mulberry32((p.seed * 7 + 11) | 0);
+  const count = Math.round(Math.pow(p.mycelium, 1.3) * perimEm * 3);
+  const totalLen = S * (0.08 + p.threadLength * 1.0);
+  const st = S * 0.018;
+  const wiggle = 0.25 + p.detail * 0.55;
+  const baseW = S * (0.006 + 0.005 * Math.max(0, p.weight + 0.5));
+  let segments = 0;
+  const grow = (x, y, a, len, wd, depth) => {
+    const steps = Math.max(2, Math.ceil(len / st));
+    const a0 = a;
+    for (let s = 0; s < steps && segments < 120000; s++) {
+      a += (R() - 0.5) * wiggle + noise.n(x / S * 3 + 500, y / S * 3) * 0.12;
+      a += (a0 - a) * 0.04;
+      const nx = x + Math.cos(a) * st, ny = y + Math.sin(a) * st;
+      ctx.lineWidth = Math.max(S * 0.0012, wd * (1 - (s / steps) * 0.75));
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(nx, ny); ctx.stroke();
+      segments++;
+      x = nx; y = ny;
+      if (depth < 4 && R() < p.branching * 0.1) {
+        const side = R() < 0.5 ? -1 : 1;
+        grow(x, y, a + side * (0.45 + R() * 0.7), (steps - s) * st * (0.45 + R() * 0.35), wd * 0.75, depth + 1);
+      }
+    }
+  };
+  for (let c = 0; c < count; c++) {
+    const [x, y, nx, ny] = pickEdge(R, edges, ne);
+    const a = Math.atan2(ny, nx) + (R() - 0.5) * 1.1;
+    grow(x - nx * S * 0.01, y - ny * S * 0.01, a, totalLen * (0.35 + R() * 0.65), baseW * (0.7 + R() * 0.6), 0);
+  }
+}
+
+function growFruit(ctx, p, S, edges, ne, perimEm) {
+  const R = mulberry32((p.seed * 13 + 29) | 0);
+  const count = Math.max(1, Math.round(Math.pow(p.fruiting, 1.2) * perimEm * 0.6));
+  for (let c = 0; c < count; c++) {
+    let e = pickEdge(R, edges, ne);
+    for (let t = 0; t < 14 && e[3] > -0.3; t++) e = pickEdge(R, edges, ne);
+    const [x, y, nx, ny] = e;
+    const size = S * (0.06 + R() * 0.14) * (0.7 + p.fruiting * 0.8);
+    const ang = Math.atan2(ny, nx) * 0.6 + (-Math.PI / 2) * 0.4 + (R() - 0.5) * 0.5;
+    const bx = x - nx * size * 0.15, by = y - ny * size * 0.15;
+    if (R() < 0.78) {
+      const tx = x + Math.cos(ang) * size, ty = y + Math.sin(ang) * size;
+      const bend = (R() - 0.5) * size * 0.5;
+      ctx.lineWidth = size * (0.1 + R() * 0.08);
+      ctx.beginPath(); ctx.moveTo(bx, by);
+      ctx.quadraticCurveTo((bx + tx) / 2 + Math.cos(ang + Math.PI / 2) * bend, (by + ty) / 2 + Math.sin(ang + Math.PI / 2) * bend, tx, ty);
+      ctx.stroke();
+      const rx = size * (0.4 + R() * 0.45), ry = rx * (0.3 + R() * 0.45);
+      ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang + Math.PI / 2);
+      ctx.beginPath(); ctx.ellipse(0, ry * 0.15, rx, ry, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else {
+      const r = size * (0.18 + R() * 0.2);
+      ctx.beginPath(); ctx.arc(x + nx * r * 0.6, y + ny * r * 0.6, r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+function scatterSpores(ctx, p, S, edges, ne, perimEm) {
+  const R = mulberry32((p.seed * 31 + 3) | 0);
+  const count = Math.round(Math.pow(p.spores, 1.4) * perimEm * 35);
+  for (let c = 0; c < count; c++) {
+    const [x, y, nx, ny] = pickEdge(R, edges, ne);
+    const a = Math.atan2(ny, nx) + (R() - 0.5) * 2.4;
+    const d = S * (0.015 + 0.12 * -Math.log(1 - R() * 0.995));
+    const r = S * (0.0025 + R() * R() * 0.009);
+    ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function hexToRgb(h) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(h || "");
+  const n = m ? parseInt(m[1], 16) : 0;
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+
+// ---------- UI ----------
+const LOCK_OPEN = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"/></svg>';
+const LOCK_SHUT = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>';
+
+function lockButton(key, label) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "lock"; b.dataset.lock = key;
+  b.setAttribute("aria-pressed", "false"); b.setAttribute("aria-label", `Lock ${label} when randomizing`);
+  return b;
+}
+function wireLock(b) {
+  const key = b.dataset.lock;
+  const paint = () => { const on = locks.has(key); b.setAttribute("aria-pressed", String(on)); b.innerHTML = on ? LOCK_SHUT : LOCK_OPEN; b.title = on ? "Locked: Randomize keeps this" : "Unlocked: Randomize changes this"; };
+  b.addEventListener("click", () => { locks.has(key) ? locks.delete(key) : locks.add(key); paint(); });
+  paint();
+}
+
+// font select
+{
+  const row = document.createElement("div"); row.className = "row select-row";
+  const sel = document.createElement("select"); sel.id = "font"; sel.setAttribute("aria-label", "Typeface");
+  FONTS.forEach(f => { const o = document.createElement("option"); o.value = f.id; o.textContent = f.label; sel.appendChild(o); });
+  row.appendChild(sel); row.appendChild(lockButton("font", "typeface"));
+  $("g-type").appendChild(row);
+  sel.addEventListener("change", () => { state.font = sel.value; schedule(true); });
+}
+const inputs = {};
+SLIDERS.forEach(s => {
+  const row = document.createElement("div"); row.className = "row";
+  const id = "s-" + s.key;
+  row.innerHTML = `<label class="name" for="${id}">${s.label}</label><output for="${id}"></output>`;
+  const inp = document.createElement("input");
+  Object.assign(inp, { type: "range", id, min: s.min, max: s.max, step: s.step });
+  row.appendChild(inp); row.appendChild(lockButton(s.key, s.label.toLowerCase()));
+  const target = $(s.group);
+  if (s.group === "g-char") target.insertBefore(row, target.querySelector(".seed-row")); else target.appendChild(row);
+  inputs[s.key] = { inp, out: row.querySelector("output"), def: s };
+  inp.addEventListener("input", () => { state[s.key] = parseFloat(inp.value); paintValue(s.key); schedule(false); });
+  inp.addEventListener("change", () => schedule(true));
+});
+document.querySelectorAll(".lock").forEach(wireLock);
+
+function paintValue(k) {
+  const { inp, out } = inputs[k];
+  inp.value = state[k];
+  const v = state[k];
+  out.textContent = (k === "tracking" || k === "weight") ? (v > 0 ? "+" : "") + v.toFixed(2) : Math.round(v * 100);
+}
+function syncUI() {
+  SLIDERS.forEach(s => paintValue(s.key));
+  $("font").value = state.font;
+  $("seed").value = state.seed;
+  $("seedTag").textContent = state.seed;
+  $("text").value = state.text;
+  $("ink").value = state.ink;
+}
+
+$("text").addEventListener("input", e => { state.text = e.target.value; schedule(false); });
+$("text").addEventListener("change", () => schedule(true));
+$("ink").addEventListener("input", e => { state.ink = e.target.value; schedule(true); });
+$("seed").addEventListener("change", e => { state.seed = clamp(parseInt(e.target.value, 10) || 0, 0, 999999); $("seedTag").textContent = state.seed; schedule(true); });
+$("newSeed").addEventListener("click", () => { state.seed = Math.floor(Math.random() * 1e6); syncUI(); schedule(true); });
+$("reset").addEventListener("click", () => { state = { ...DEFAULTS, text: state.text, ink: state.ink }; syncUI(); schedule(true); });
+$("randomize").addEventListener("click", () => {
+  const r = Math.random;
+  SLIDERS.forEach(s => {
+    if (locks.has(s.key)) return;
+    let v;
+    if (s.key === "tracking") v = -0.04 + r() * 0.3;
+    else if (s.key === "weight") v = (r() - 0.45) * 1.4;
+    else if (s.key === "detail" || s.key === "threadLength" || s.key === "branching") v = 0.1 + r() * 0.85;
+    else v = r() < 0.25 ? 0 : Math.pow(r(), 1.3) * (s.key === "dissolve" || s.key === "pitting" ? 0.55 : 0.85);
+    state[s.key] = Math.round(clamp(v, s.min, s.max) * 100) / 100;
+  });
+  if (!locks.has("font")) state.font = FONTS[Math.floor(r() * FONTS.length)].id;
+  if (!locks.has("seed")) state.seed = Math.floor(r() * 1e6);
+  syncUI(); schedule(true);
+});
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  $("stage").className = "stage bg-" + b.dataset.bg;
+}));
+
+// ---------- preview scheduling ----------
+const view = $("view"), stage = $("stage");
+let pending = null, timer = null, lastFull = true;
+async function ensureFont(p) {
+  const f = fontById(p.font);
+  try { await document.fonts.load(fontCss(f, 100), p.text || "x"); } catch (_) {}
+}
+function schedule(full) {
+  lastFull = full;
+  if (pending) return;
+  pending = requestAnimationFrame(async () => {
+    pending = null;
+    const full = lastFull;
+    await draw(full ? 1 : 0.45);
+    clearTimeout(timer);
+    if (!full) timer = setTimeout(() => draw(1), 260);
+  });
+}
+async function draw(quality) {
+  const snap = { ...state };
+  await ensureFont(snap);
+  const box = stage.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const L = layoutEm(snap);
+  const fitW = (box.width - 48) / L.W, fitH = (box.height - 48) / L.H;
+  const cssScale = Math.max(40, Math.min(fitW, fitH));
+  const longCss = Math.max(L.W, L.H) * cssScale;
+  const longPx = Math.min(1800, longCss * dpr) * quality;
+  $("busy").hidden = false;
+  await new Promise(r => setTimeout(r, 0));
+  const t0 = performance.now();
+  const { canvas } = render(snap, longPx);
+  const ms = Math.round(performance.now() - t0);
+  view.width = canvas.width; view.height = canvas.height;
+  view.style.width = (L.W * cssScale) + "px";
+  view.style.height = (L.H * cssScale) + "px";
+  view.getContext("2d").drawImage(canvas, 0, 0);
+  $("busy").hidden = true;
+  updateMeta(L, ms);
+}
+function updateMeta(L, ms) {
+  const long = parseInt($("exportSize").value, 10);
+  const s = long / Math.max(L.W, L.H);
+  const w = Math.round(L.W * s), h = Math.round(L.H * s);
+  const cm = px => (px / 300 * 2.54).toFixed(1);
+  $("meta").textContent = `${w} × ${h} px  ·  ${cm(w)} × ${cm(h)} cm at 300 dpi  ·  preview ${ms} ms`;
+}
+$("exportSize").addEventListener("change", () => updateMeta(layoutEm(state), 0));
+new ResizeObserver(() => schedule(true)).observe(stage);
+
+// ---------- download ----------
+let downloads = null;
+const hasClaude = !!(window.claude && window.claude.use);
+if (hasClaude) window.claude.use("downloads").then(d => { downloads = d; }).catch(() => {});
+$("download").addEventListener("click", async () => {
+  const btn = $("download"), note = $("dlNote");
+  btn.disabled = true; btn.textContent = "Rendering…"; note.classList.remove("err");
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const snap = { ...state };
+    await ensureFont(snap);
+    const { canvas } = render(snap, parseInt($("exportSize").value, 10));
+    const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+    const slug = (snap.text || "type").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "type";
+    const filename = `mycotype-${slug}-${snap.seed}.png`;
+    if (downloads) {
+      await downloads.save({ filename, data: blob });
+      note.textContent = `Saved ${filename}.`;
+    } else if (!hasClaude) {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      note.textContent = `Saved ${filename}.`;
+    } else {
+      note.textContent = "Saving files isn't available in this view. Open the page on claude.ai in a browser to download."; note.classList.add("err");
+    }
+  } catch (e) {
+    const code = e && e.code;
+    note.textContent = code === "declined" ? "Download cancelled." : code === "rate_limited" ? "A save prompt is already open. Finish that one first." : "The PNG couldn't be saved. Try a smaller size.";
+    if (code !== "declined") note.classList.add("err");
+  } finally {
+    btn.disabled = false; btn.textContent = "Download PNG";
+  }
+});
+
+// ---------- presets ----------
+const PKEY = "mycotype.presets.v1";
+const readPresets = () => { try { return JSON.parse(localStorage.getItem(PKEY) || "[]"); } catch (_) { return []; } };
+const writePresets = list => { try { localStorage.setItem(PKEY, JSON.stringify(list)); return true; } catch (_) { return false; } };
+const presetFields = () => { const o = { font: state.font, seed: state.seed }; SLIDERS.forEach(s => o[s.key] = state[s.key]); return o; };
+function paintPresets(selectName) {
+  const list = readPresets(), sel = $("presetList");
+  sel.innerHTML = "";
+  if (!list.length) { sel.innerHTML = '<option value="">No presets yet</option>'; return; }
+  list.forEach(p => { const o = document.createElement("option"); o.value = p.name; o.textContent = p.name; sel.appendChild(o); });
+  if (selectName) sel.value = selectName;
+}
+const pnote = t => { $("presetNote").textContent = t; };
+$("savePreset").addEventListener("click", () => {
+  const name = $("presetName").value.trim() || `Look ${state.seed}`;
+  const list = readPresets().filter(p => p.name !== name);
+  list.push({ name, params: presetFields() });
+  if (writePresets(list)) { paintPresets(name); $("presetName").value = ""; pnote(`Saved "${name}".`); }
+  else pnote("This browser blocked saving. Use Back up presets to keep a file instead.");
+});
+$("loadPreset").addEventListener("click", () => {
+  const p = readPresets().find(x => x.name === $("presetList").value);
+  if (!p) return pnote("Pick a preset to load.");
+  state = { ...state, ...p.params }; syncUI(); schedule(true); pnote(`Loaded "${p.name}".`);
+});
+$("deletePreset").addEventListener("click", () => {
+  const name = $("presetList").value; if (!name) return;
+  writePresets(readPresets().filter(p => p.name !== name)); paintPresets(); pnote(`Deleted "${name}".`);
+});
+$("exportPresets").addEventListener("click", async () => {
+  const list = readPresets();
+  if (!list.length) return pnote("Save a preset first.");
+  const data = JSON.stringify({ app: "mycotype", version: 1, presets: list }, null, 2);
+  try {
+    if (downloads) await downloads.save({ filename: "mycotype-presets.json", data });
+    else if (!hasClaude) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data])); a.download = "mycotype-presets.json"; a.click(); }
+    else return pnote("Saving files isn't available in this view.");
+    pnote("Backup saved.");
+  } catch (e) { pnote(e && e.code === "declined" ? "Backup cancelled." : "The backup couldn't be saved."); }
+});
+$("importPresets").addEventListener("change", async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const j = JSON.parse(await file.text());
+    const incoming = (j.presets || []).filter(p => p && typeof p.name === "string" && p.params);
+    const names = new Set(incoming.map(p => p.name));
+    writePresets(readPresets().filter(p => !names.has(p.name)).concat(incoming));
+    paintPresets(); pnote(`Restored ${incoming.length} preset${incoming.length === 1 ? "" : "s"}.`);
+  } catch (_) { pnote("That file isn't a Mycotype backup."); }
+  e.target.value = "";
+});
+
+// ---------- start ----------
+state.text = $("text").value || "Mycelium";
+state.ink = "#000000";
+DEFAULTS.ink = "#000000";
+paintPresets();
+syncUI();
+schedule(true);
+})();
+</script>
