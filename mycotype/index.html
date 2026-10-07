@@ -207,6 +207,7 @@ const FONTS = [
 
 const SLIDERS = [
   { key: "tracking", group: "g-type", label: "Letter spacing", min: -0.1, max: 0.4, step: 0.01, def: 0.02 },
+  { key: "leading", group: "g-type", label: "Line height", min: 0.5, max: 1.6, step: 0.01, def: 1.08 },
   { key: "weight", group: "g-type", label: "Weight", min: -1, max: 1, step: 0.01, def: 0 },
   { key: "warp", group: "g-form", label: "Organic warp", min: 0, max: 1, step: 0.01, def: 0.25 },
   { key: "rough", group: "g-form", label: "Edge roughness", min: 0, max: 1, step: 0.01, def: 0.3 },
@@ -290,7 +291,7 @@ function layoutEm(p) {
     if (i === 0) asc = m.actualBoundingBoxAscent / ref;
     if (i === lines.length - 1) desc = m.actualBoundingBoxDescent / ref;
   });
-  const lh = 1.08;
+  const lh = p.leading ?? 1.08;
   const leftOverhang = 0.1; // scripts and italics spill past their advance width
   const textW = maxW + leftOverhang * 2;
   const textH = asc + desc + (lines.length - 1) * lh;
@@ -633,7 +634,7 @@ function paintValue(k) {
   const { inp, out } = inputs[k];
   inp.value = state[k];
   const v = state[k];
-  out.textContent = (k === "tracking" || k === "weight") ? (v > 0 ? "+" : "") + v.toFixed(2) : Math.round(v * 100);
+  out.textContent = k === "leading" ? v.toFixed(2) : (k === "tracking" || k === "weight") ? (v > 0 ? "+" : "") + v.toFixed(2) : Math.round(v * 100);
 }
 function syncUI() {
   SLIDERS.forEach(s => paintValue(s.key));
@@ -657,6 +658,7 @@ $("randomize").addEventListener("click", () => {
     let v;
     if (s.key === "tracking") v = -0.04 + r() * 0.3;
     else if (s.key === "weight") v = (r() - 0.45) * 1.4;
+    else if (s.key === "leading") v = 0.75 + r() * 0.4;
     else if (s.key === "detail" || s.key === "threadLength" || s.key === "branching") v = 0.1 + r() * 0.85;
     else v = r() < 0.25 ? 0 : Math.pow(r(), 1.3) * (s.key === "dissolve" || s.key === "pitting" ? 0.55 : 0.85);
     state[s.key] = Math.round(clamp(v, s.min, s.max) * 100) / 100;
