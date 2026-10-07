@@ -125,7 +125,7 @@ button.btn:disabled { opacity: 0.5; cursor: progress; }
     <div class="group" id="g-type"><div class="group-head"><h2>Type</h2></div></div>
     <div class="group" id="g-form"><div class="group-head"><h2>Form</h2><p>bending and edges</p></div></div>
     <div class="group" id="g-decay"><div class="group-head"><h2>Decay</h2><p>rot, pores, crumbling</p></div></div>
-    <div class="group" id="g-growth"><div class="group-head"><h2>Growth</h2><p>hyphae, caps, spores</p></div></div>
+    <div class="group" id="g-growth"><div class="group-head"><h2>Growth</h2><p>threads that root in the letters</p></div></div>
     <div class="group" id="g-char">
       <div class="group-head"><h2>Character</h2></div>
       <div class="seed-row">
@@ -213,11 +213,13 @@ const SLIDERS = [
   { key: "erosion", group: "g-decay", label: "Erosion", min: 0, max: 1, step: 0.01, def: 0.2 },
   { key: "pitting", group: "g-decay", label: "Pitting", min: 0, max: 1, step: 0.01, def: 0.1 },
   { key: "dissolve", group: "g-decay", label: "Dissolve", min: 0, max: 1, step: 0.01, def: 0 },
-  { key: "mycelium", group: "g-growth", label: "Mycelium threads", min: 0, max: 1, step: 0.01, def: 0.3 },
-  { key: "threadLength", group: "g-growth", label: "Thread length", min: 0, max: 1, step: 0.01, def: 0.4 },
-  { key: "branching", group: "g-growth", label: "Branching", min: 0, max: 1, step: 0.01, def: 0.45 },
-  { key: "fruiting", group: "g-growth", label: "Fruiting bodies", min: 0, max: 1, step: 0.01, def: 0.15 },
-  { key: "spores", group: "g-growth", label: "Spores", min: 0, max: 1, step: 0.01, def: 0.2 },
+  { key: "mycelium", group: "g-growth", label: "Threads", min: 0, max: 1, step: 0.01, def: 0.4 },
+  { key: "threadLength", group: "g-growth", label: "Thread length", min: 0, max: 1, step: 0.01, def: 0.45 },
+  { key: "thickness", group: "g-growth", label: "Thread thickness", min: 0, max: 1, step: 0.01, def: 0.4 },
+  { key: "swell", group: "g-growth", label: "Root swell", min: 0, max: 1, step: 0.01, def: 0.45 },
+  { key: "branching", group: "g-growth", label: "Branching", min: 0, max: 1, step: 0.01, def: 0.35 },
+  { key: "curl", group: "g-growth", label: "Curl", min: 0, max: 1, step: 0.01, def: 0.35 },
+  { key: "reach", group: "g-growth", label: "Reach for neighbours", min: 0, max: 1, step: 0.01, def: 0.5 },
   { key: "detail", group: "g-char", label: "Detail level", min: 0, max: 1, step: 0.01, def: 0.5 },
 ];
 
@@ -265,38 +267,6 @@ function makeNoise(seed) {
   }
   return { n, fbm };
 }
-function boxBlur(a, w, h, r, passes) {
-  const t = new Float32Array(a.length), d = 2 * r + 1;
-  for (let p = 0; p < passes; p++) {
-    for (let y = 0; y < h; y++) {
-      const o = y * w; let s = 0;
-      for (let x = 0; x <= r && x < w; x++) s += a[o + x];
-      for (let x = 0; x < w; x++) {
-        t[o + x] = s / d;
-        const xa = x + r + 1, xr = x - r;
-        if (xa < w) s += a[o + xa];
-        if (xr >= 0) s -= a[o + xr];
-      }
-    }
-    for (let x = 0; x < w; x++) {
-      let s = 0;
-      for (let y = 0; y <= r && y < h; y++) s += t[y * w + x];
-      for (let y = 0; y < h; y++) {
-        a[y * w + x] = s / d;
-        const ya = y + r + 1, yr = y - r;
-        if (ya < h) s += t[ya * w + x];
-        if (yr >= 0) s -= t[yr * w + x];
-      }
-    }
-  }
-}
-function sample(F, w, h, x, y) {
-  if (x < 0 || y < 0 || x >= w - 1 || y >= h - 1) return 0;
-  const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi, i = yi * w + xi;
-  const a = F[i] + fx * (F[i + 1] - F[i]), b = F[i + w] + fx * (F[i + w + 1] - F[i + w]);
-  return a + fy * (b - a);
-}
-
 // ---------- layout ----------
 const fontById = id => FONTS.find(f => f.id === id) || FONTS[2];
 const fontCss = (f, px) => `${f.style || "normal"} ${f.weight} ${px}px "${f.family}"`;
@@ -324,8 +294,8 @@ function layoutEm(p) {
   const leftOverhang = 0.1; // scripts and italics spill past their advance width
   const textW = maxW + leftOverhang * 2;
   const textH = asc + desc + (lines.length - 1) * lh;
-  const grow = p.mycelium > 0 ? 0.08 + p.threadLength * 0.7 : 0;
-  const margin = Math.min(1.1, 0.2 + Math.max(grow, p.spores > 0 ? 0.25 : 0, p.fruiting > 0 ? 0.25 : 0) + p.warp * 0.2 + Math.max(0, p.weight) * 0.06);
+  const grow = p.mycelium > 0 ? 0.1 + p.threadLength * 0.8 : 0;
+  const margin = Math.min(1.1, 0.2 + grow + p.warp * 0.2 + Math.max(0, p.weight) * 0.06);
   return { lines, asc, lh, textW, textH, margin, W: textW + margin * 2, H: textH + margin * 2 };
 }
 
@@ -336,40 +306,81 @@ function render(p, longEdge) {
   const w = Math.max(2, Math.round(L.W * S)), h = Math.max(2, Math.round(L.H * S));
   const f = fontById(p.font);
 
-  // 1. letterforms as a mask
+  // 1. letterforms as a mask, remembering where each letter sits
   const mc = document.createElement("canvas"); mc.width = w; mc.height = h;
   const m = mc.getContext("2d", { willReadFrequently: true });
   m.font = fontCss(f, S); m.textBaseline = "alphabetic"; m.fillStyle = "#fff"; m.strokeStyle = "#fff"; m.lineJoin = "round";
+  const glyphs = []; // per line: [{x0, x1}]
+  L.lines.forEach((ln, i) => {
+    const row = [];
+    let x = (w - lineWidth(m, ln, S, p.tracking)) / 2;
+    for (const c of ln) {
+      const cw = m.measureText(c).width;
+      row.push({ x0: x, x1: x + cw, blank: !c.trim() });
+      x += cw + p.tracking * S;
+    }
+    glyphs.push(row);
+  });
+  const lineY = i => L.margin * S + L.asc * S + i * L.lh * S;
   const drawLines = (mode) => {
     L.lines.forEach((ln, i) => {
-      const lw = lineWidth(m, ln, S, p.tracking);
-      let x = (w - lw) / 2;
-      const y = L.margin * S + L.asc * S + i * L.lh * S;
-      if (!p.tracking) { mode === "fill" ? m.fillText(ln, x, y) : m.strokeText(ln, x, y); return; }
-      for (const c of ln) {
-        mode === "fill" ? m.fillText(c, x, y) : m.strokeText(c, x, y);
-        x += m.measureText(c).width + p.tracking * S;
-      }
+      const y = lineY(i);
+      if (!p.tracking) { const x = glyphs[i].length ? glyphs[i][0].x0 : 0; mode === "fill" ? m.fillText(ln, x, y) : m.strokeText(ln, x, y); return; }
+      [...ln].forEach((c, j) => { mode === "fill" ? m.fillText(c, glyphs[i][j].x0, y) : m.strokeText(c, glyphs[i][j].x0, y); });
     });
   };
   drawLines("fill");
-  if (p.weight > 0) { m.lineWidth = p.weight * S * 0.07; drawLines("stroke"); }
-  if (p.weight < 0) { m.globalCompositeOperation = "destination-out"; m.lineWidth = -p.weight * S * 0.05; drawLines("stroke"); m.globalCompositeOperation = "source-over"; }
 
-  const src = m.getImageData(0, 0, w, h).data;
+  // 2. signed distance from the letter edge, in pixels (positive inside)
   const N = w * h;
-  const B = new Float32Array(N), B2 = new Float32Array(N);
-  for (let i = 0; i < N; i++) { const a = src[i * 4 + 3] / 255; B[i] = a; B2[i] = a; }
-
-  // 2. soft fields: a narrow one for edges, a wide one for "depth inside the letter"
-  const rb = Math.max(1, Math.round(S * (0.01 + 0.045 * p.rough)));
-  boxBlur(B, w, h, rb, 2);
-  boxBlur(B2, w, h, Math.max(2, Math.round(S * 0.03)), 2);
+  const Dl = signedDistance(m.getImageData(0, 0, w, h).data, w, h);
+  const wOff = p.weight * S * (p.weight > 0 ? 0.04 : 0.025);
+  if (wOff) for (let i = 0; i < N; i++) Dl[i] += wOff;
 
   const noise = makeNoise(p.seed);
   const det = p.detail;
 
-  // 3. warp field on a coarse grid
+  // 3. edge points of the clean letters, tagged with the letter they belong to
+  const es = Math.max(1, Math.round(S * 0.012));
+  const edges = [], byGlyph = new Map();
+  const glyphAt = (x, y) => {
+    const li = clamp(Math.round((y - lineY(0) + S * 0.35) / (L.lh * S)), 0, glyphs.length - 1);
+    const row = glyphs[li]; let best = -1, bd = Infinity;
+    for (let j = 0; j < row.length; j++) {
+      if (row[j].blank) continue;
+      const g = row[j], d = x < g.x0 ? g.x0 - x : x > g.x1 ? x - g.x1 : 0;
+      if (d < bd) { bd = d; best = j; }
+    }
+    return best < 0 ? -1 : li * 10000 + best;
+  };
+  const Dat = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? -1e9 : Dl[y * w + x];
+  for (let y = es; y < h - es; y += es) for (let x = es; x < w - es; x += es) {
+    if (Dat(x, y) < 0) continue;
+    if (Dat(x + es, y) >= 0 && Dat(x - es, y) >= 0 && Dat(x, y + es) >= 0 && Dat(x, y - es) >= 0) continue;
+    const gx = clamp(Dat(x + es, y), -3 * es, 3 * es) - clamp(Dat(x - es, y), -3 * es, 3 * es);
+    const gy = clamp(Dat(x, y + es), -3 * es, 3 * es) - clamp(Dat(x, y - es), -3 * es, 3 * es);
+    const len = Math.hypot(gx, gy);
+    if (len < 1e-4) continue;
+    const g = glyphAt(x, y), k = edges.length / 5;
+    edges.push(x, y, -gx / len, -gy / len, g);
+    if (!byGlyph.has(g)) byGlyph.set(g, []);
+    byGlyph.get(g).push(k);
+  }
+  const ne = edges.length / 5;
+  const perimEm = ne * es / S;
+
+  // 4. threads, drawn as their own shape and later fused into the letters
+  let Dt = null;
+  const pulls = [];
+  if (p.mycelium > 0 && ne > 0) {
+    const tc = document.createElement("canvas"); tc.width = w; tc.height = h;
+    const tctx = tc.getContext("2d", { willReadFrequently: true });
+    tctx.fillStyle = tctx.strokeStyle = "#fff"; tctx.lineCap = "round"; tctx.lineJoin = "round";
+    growThreads(tctx, p, S, edges, ne, perimEm, byGlyph, noise, pulls);
+    Dt = signedDistance(tctx.getImageData(0, 0, w, h).data, w, h);
+  }
+
+  // 5. warp field on a coarse grid, plus local swelling where threads take root
   const gs = Math.max(2, Math.round(S * 0.015));
   const gw = Math.ceil(w / gs) + 2, gh = Math.ceil(h / gs) + 2;
   const DX = new Float32Array(gw * gh), DY = new Float32Array(gw * gh);
@@ -381,51 +392,72 @@ function render(p, longEdge) {
       DY[gy * gw + gx] = amp * noise.fbm(ux + 43.2, uy + 11.7, 3);
     }
   }
+  const sw = p.swell;
+  if (sw > 0) {
+    for (let j = 0; j < pulls.length; j += 5) {
+      const px = pulls[j], py = pulls[j + 1], nx = pulls[j + 2], ny = pulls[j + 3], tw = pulls[j + 4];
+      const Rr = S * (0.04 + 0.08 * sw) + tw, amp = sw * (S * 0.025 + tw * 0.9);
+      const x0 = Math.max(0, Math.floor((px - 2 * Rr) / gs)), x1 = Math.min(gw - 1, Math.ceil((px + 2 * Rr) / gs));
+      const y0 = Math.max(0, Math.floor((py - 2 * Rr) / gs)), y1 = Math.min(gh - 1, Math.ceil((py + 2 * Rr) / gs));
+      for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
+        const dx = gx * gs - px, dy = gy * gs - py, f = Math.exp(-(dx * dx + dy * dy) / (Rr * Rr));
+        DX[gy * gw + gx] -= nx * amp * f; DY[gy * gw + gx] -= ny * amp * f;
+      }
+    }
+  }
+  const useWarp = p.warp > 0 || (sw > 0 && pulls.length > 0);
 
-  // 4. per-pixel decay
-  const out = new ImageData(w, h), od = out.data, V = new Float32Array(N);
+  // 6. per-pixel decay, all measured in pixels from the edge
+  const out = new ImageData(w, h), od = out.data;
   const ink = hexToRgb(p.ink || "#000000");
-  const k = 2.2 * rb;
   const fr = 5 + det * 22, fe = 1.4 + det * 3.5, fp = 9 + det * 26, gr = 110 + det * 220;
-  const roughA = p.rough * 0.55, eroT = 1 - p.erosion * 0.8, pitT = 0.86 - p.pitting * 0.26;
+  const roughA = p.rough * S * 0.03, eroT = 1 - p.erosion * 0.8, pitT = 0.86 - p.pitting * 0.26;
   const dis = p.dissolve, seed = p.seed | 0;
+  const depthPx = S * 0.06, fillet = S * (0.012 + 0.06 * sw), blob = p.rough * S * 0.012;
+  const reachOut = roughA * 0.8 + blob + (dis > 0 ? depthPx : 0) + 1.5;
   for (let y = 0; y < h; y++) {
     const gyf = y / gs, gy0 = gyf | 0, ty = gyf - gy0;
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       let sx = x, sy = y;
-      if (p.warp > 0) {
+      if (useWarp) {
         const gxf = x / gs, gx0 = gxf | 0, tx = gxf - gx0, gi = gy0 * gw + gx0;
         const dx0 = DX[gi] + tx * (DX[gi + 1] - DX[gi]), dx1 = DX[gi + gw] + tx * (DX[gi + gw + 1] - DX[gi + gw]);
         const dy0 = DY[gi] + tx * (DY[gi + 1] - DY[gi]), dy1 = DY[gi + gw] + tx * (DY[gi + gw + 1] - DY[gi + gw]);
         sx += dx0 + ty * (dx1 - dx0); sy += dy0 + ty * (dy1 - dy0);
       }
-      const v = sample(B, w, h, sx, sy);
-      V[i] = v;
-      const d2 = (v > 0.01 || dis > 0) ? sample(B2, w, h, sx, sy) : 0;
-      if (v < 0.01 && !(dis > 0 && d2 > 0.04)) continue;
+      const dl = sampleD(Dl, w, h, sx, sy);
+      let d = dl, spare = 1;
+      if (Dt) {
+        const dt = sampleD(Dt, w, h, sx, sy);
+        const hh = clamp(0.5 + 0.5 * (dt - dl) / fillet, 0, 1);
+        d = dl + (dt - dl) * hh + fillet * hh * (1 - hh);
+        spare = 1 - 0.75 * clamp((dt - dl) / (S * 0.02) + 0.5, 0, 1); // threads decay less than letters
+      }
+      if (d < -reachOut) continue;
       const ux = sx / S, uy = sy / S;
-      const depth = clamp((d2 - 0.5) * 2, 0, 1);
-      let n = v - 0.5;
+      const depth = clamp(d / depthPx, 0, 1);
+      let n = d;
+      if (blob > 0) n += blob * noise.n(ux * 3 + 50, uy * 3);
       if (roughA > 0) n += roughA * noise.fbm(ux * fr + 100, uy * fr, 3);
       if (p.erosion > 0) {
-        const e = 0.5 + 0.8 * noise.fbm(ux * fe + 200, uy * fe, 4) + (1 - depth) * 0.22;
-        if (e > eroT) n -= (e - eroT) * 14;
+        const e = 0.5 + 0.8 * noise.fbm(ux * fe + 200, uy * fe, 4) + (1 - depth) * 0.22 * spare;
+        if (e > eroT) n -= (e - eroT) * S * 0.5 * spare;
       }
       if (p.pitting > 0) {
         const q = 0.5 + 0.6 * noise.n(ux * fp + 300, uy * fp);
-        if (q > pitT) n -= (q - pitT) * 22;
+        if (q > pitT) n -= (q - pitT) * S * 0.6 * spare;
       }
-      let a = clamp(0.5 + n * k, 0, 1);
+      let a = clamp(0.5 + n, 0, 1);
       if (dis > 0) {
         const cx = Math.floor(ux * gr), cy = Math.floor(uy * gr);
         const g = hash2(cx, cy, seed);
         if (a > 0) {
-          const zone = dis * 0.95 * Math.pow(1 - depth, 1.6) + dis * 0.3 * noise.fbm(ux * 2.2 + 400, uy * 2.2, 2);
+          const zone = (dis * 0.95 * Math.pow(1 - depth, 1.6) + dis * 0.3 * noise.fbm(ux * 2.2 + 400, uy * 2.2, 2)) * spare;
           if (g < zone) a = 0;
-        } else if (d2 > 0.04 && d2 < 0.5) {
-          const t = d2 / 0.5;
-          if (hash2(cx, cy, seed + 7) < dis * 0.35 * t * t * t) a = 1;
+        } else if (d > -depthPx) {
+          const t = 1 + d / depthPx;
+          if (hash2(cx, cy, seed + 7) < dis * 0.3 * t * t * t) a = 1;
         }
       }
       if (a > 0) { const o = i * 4; od[o] = ink[0]; od[o + 1] = ink[1]; od[o + 2] = ink[2]; od[o + 3] = Math.round(a * 255); }
@@ -433,105 +465,119 @@ function render(p, longEdge) {
   }
 
   const c = document.createElement("canvas"); c.width = w; c.height = h;
-  const ctx = c.getContext("2d");
-  ctx.putImageData(out, 0, 0);
-
-  // 5. edge points for growth
-  const es = Math.max(1, Math.round(S * 0.012));
-  const edges = [];
-  const A = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : od[(y * w + x) * 4 + 3];
-  const Vat = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : V[y * w + x];
-  for (let y = es; y < h - es; y += es) for (let x = es; x < w - es; x += es) {
-    if (A(x, y) < 128) continue;
-    if (A(x + es, y) >= 128 && A(x - es, y) >= 128 && A(x, y + es) >= 128 && A(x, y - es) >= 128) continue;
-    let gx = Vat(x + es, y) - Vat(x - es, y), gy = Vat(x, y + es) - Vat(x, y - es);
-    const len = Math.hypot(gx, gy);
-    if (len < 1e-4) continue;
-    edges.push(x, y, -gx / len, -gy / len);
-  }
-  const ne = edges.length / 4;
-  const perimEm = ne * es / S;
-
-  ctx.fillStyle = p.ink || "#000"; ctx.strokeStyle = p.ink || "#000"; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  if (ne > 0) {
-    if (p.mycelium > 0) growMycelium(ctx, p, S, edges, ne, perimEm, noise);
-    if (p.fruiting > 0) growFruit(ctx, p, S, edges, ne, perimEm);
-    if (p.spores > 0) scatterSpores(ctx, p, S, edges, ne, perimEm);
-  }
+  c.getContext("2d").putImageData(out, 0, 0);
   return { canvas: c, S };
 }
 
-function pickEdge(R, edges, ne) { const j = Math.floor(R() * ne) * 4; return [edges[j], edges[j + 1], edges[j + 2], edges[j + 3]]; }
+// Two-pass chamfer distance (3x3 kernel) on pixels that are not yet 0.
+function chamfer(d, w, h) {
+  const b = 1.41421356;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; let v = d[i]; if (v === 0) continue;
+    if (x > 0 && d[i - 1] + 1 < v) v = d[i - 1] + 1;
+    if (y > 0) {
+      if (d[i - w] + 1 < v) v = d[i - w] + 1;
+      if (x > 0 && d[i - w - 1] + b < v) v = d[i - w - 1] + b;
+      if (x < w - 1 && d[i - w + 1] + b < v) v = d[i - w + 1] + b;
+    }
+    d[i] = v;
+  }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+    const i = y * w + x; let v = d[i]; if (v === 0) continue;
+    if (x < w - 1 && d[i + 1] + 1 < v) v = d[i + 1] + 1;
+    if (y < h - 1) {
+      if (d[i + w] + 1 < v) v = d[i + w] + 1;
+      if (x < w - 1 && d[i + w + 1] + b < v) v = d[i + w + 1] + b;
+      if (x > 0 && d[i + w - 1] + b < v) v = d[i + w - 1] + b;
+    }
+    d[i] = v;
+  }
+}
+function signedDistance(rgba, w, h) {
+  const N = w * h, din = new Float32Array(N), dout = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const inside = rgba[i * 4 + 3] >= 128; din[i] = inside ? 1e7 : 0; dout[i] = inside ? 0 : 1e7; }
+  chamfer(din, w, h); chamfer(dout, w, h);
+  for (let i = 0; i < N; i++) {
+    const a = rgba[i * 4 + 3] / 255;
+    din[i] = a >= 0.5 ? din[i] - 1 + a : a - dout[i]; // sub-pixel edge from antialiasing
+  }
+  return din;
+}
+function sampleD(F, w, h, x, y) {
+  if (x < 0 || y < 0 || x >= w - 1 || y >= h - 1) return -1e6;
+  const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi, i = yi * w + xi;
+  const a = F[i] + fx * (F[i + 1] - F[i]), b = F[i + w] + fx * (F[i + w + 1] - F[i + w]);
+  return a + fy * (b - a);
+}
 
-function growMycelium(ctx, p, S, edges, ne, perimEm, noise) {
+const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+
+function growThreads(ctx, p, S, edges, ne, perimEm, byGlyph, noise, pulls) {
   const R = mulberry32((p.seed * 7 + 11) | 0);
-  const count = Math.round(Math.pow(p.mycelium, 1.3) * perimEm * 3);
-  const totalLen = S * (0.08 + p.threadLength * 1.0);
-  const st = S * 0.018;
-  const wiggle = 0.25 + p.detail * 0.55;
-  const baseW = S * (0.006 + 0.005 * Math.max(0, p.weight + 0.5));
+  const count = Math.max(1, Math.round(Math.pow(p.mycelium, 1.2) * perimEm * 1.6));
+  const W0 = S * (0.012 + p.thickness * 0.07);
+  const baseLen = S * (0.1 + p.threadLength * 1.0);
+  const st = S * 0.012;
+  const wiggle = 0.1 + p.detail * 0.35;
   let segments = 0;
-  const grow = (x, y, a, len, wd, depth) => {
+  const seg = (x, y, nx, ny, wd) => { ctx.lineWidth = Math.max(S * 0.004, wd); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(nx, ny); ctx.stroke(); segments++; };
+
+  const grow = (x, y, a, len, w0, depth, target, cd) => {
     const steps = Math.max(2, Math.ceil(len / st));
-    const a0 = a;
-    for (let s = 0; s < steps && segments < 120000; s++) {
-      a += (R() - 0.5) * wiggle + noise.n(x / S * 3 + 500, y / S * 3) * 0.12;
-      a += (a0 - a) * 0.04;
+    for (let s = 0; s < steps && segments < 150000; s++) {
+      const t = s / steps;
+      a += (R() - 0.5) * wiggle + noise.n(x / S * 3 + 500, y / S * 3) * 0.08;
+      let wd;
+      if (target) {
+        const dx = target[0] - x, dy = target[1] - y, dist = Math.hypot(dx, dy);
+        if (dist < Math.max(st, w0 * 0.4)) { seg(x, y, target[0], target[1], w0 * 0.8); return; }
+        a += wrapAngle(Math.atan2(dy, dx) - a) * (0.04 + 0.3 * t * t) * (0.5 + p.reach * 0.5);
+        a += cd * p.curl * 0.12 * Math.sin(t * Math.PI);
+        wd = w0 * (0.4 + 0.6 * Math.abs(1 - 2 * t));
+      } else {
+        a += cd * p.curl * 0.55 * t * t;
+        wd = w0 * (0.08 + 0.92 * Math.pow(1 - t, 0.75));
+      }
       const nx = x + Math.cos(a) * st, ny = y + Math.sin(a) * st;
-      ctx.lineWidth = Math.max(S * 0.0012, wd * (1 - (s / steps) * 0.75));
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(nx, ny); ctx.stroke();
-      segments++;
+      seg(x, y, nx, ny, wd);
       x = nx; y = ny;
-      if (depth < 4 && R() < p.branching * 0.1) {
+      if (depth < 3 && R() < p.branching * 0.07) {
         const side = R() < 0.5 ? -1 : 1;
-        grow(x, y, a + side * (0.45 + R() * 0.7), (steps - s) * st * (0.45 + R() * 0.35), wd * 0.75, depth + 1);
+        grow(x, y, a + side * (0.4 + R() * 0.7), (steps - s) * st * (0.35 + R() * 0.45), wd * 0.6, depth + 1, null, side);
       }
     }
   };
-  for (let c = 0; c < count; c++) {
-    const [x, y, nx, ny] = pickEdge(R, edges, ne);
-    const a = Math.atan2(ny, nx) + (R() - 0.5) * 1.1;
-    grow(x - nx * S * 0.01, y - ny * S * 0.01, a, totalLen * (0.35 + R() * 0.65), baseW * (0.7 + R() * 0.6), 0);
-  }
-}
 
-function growFruit(ctx, p, S, edges, ne, perimEm) {
-  const R = mulberry32((p.seed * 13 + 29) | 0);
-  const count = Math.max(1, Math.round(Math.pow(p.fruiting, 1.2) * perimEm * 0.6));
+  const glyphKeys = [...byGlyph.keys()].filter(g => g >= 0).sort((a, b) => a - b);
   for (let c = 0; c < count; c++) {
-    let e = pickEdge(R, edges, ne);
-    for (let t = 0; t < 14 && e[3] > -0.3; t++) e = pickEdge(R, edges, ne);
-    const [x, y, nx, ny] = e;
-    const size = S * (0.06 + R() * 0.14) * (0.7 + p.fruiting * 0.8);
-    const ang = Math.atan2(ny, nx) * 0.6 + (-Math.PI / 2) * 0.4 + (R() - 0.5) * 0.5;
-    const bx = x - nx * size * 0.15, by = y - ny * size * 0.15;
-    if (R() < 0.78) {
-      const tx = x + Math.cos(ang) * size, ty = y + Math.sin(ang) * size;
-      const bend = (R() - 0.5) * size * 0.5;
-      ctx.lineWidth = size * (0.1 + R() * 0.08);
-      ctx.beginPath(); ctx.moveTo(bx, by);
-      ctx.quadraticCurveTo((bx + tx) / 2 + Math.cos(ang + Math.PI / 2) * bend, (by + ty) / 2 + Math.sin(ang + Math.PI / 2) * bend, tx, ty);
-      ctx.stroke();
-      const rx = size * (0.4 + R() * 0.45), ry = rx * (0.3 + R() * 0.45);
-      ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang + Math.PI / 2);
-      ctx.beginPath(); ctx.ellipse(0, ry * 0.15, rx, ry, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
-      ctx.restore();
-    } else {
-      const r = size * (0.18 + R() * 0.2);
-      ctx.beginPath(); ctx.arc(x + nx * r * 0.6, y + ny * r * 0.6, r, 0, Math.PI * 2); ctx.fill();
+    // spread roots evenly across letters, so long outlines don't hog every thread
+    const pool0 = glyphKeys.length ? byGlyph.get(glyphKeys[Math.floor(R() * glyphKeys.length)]) : null;
+    const j = (pool0 ? pool0[Math.floor(R() * pool0.length)] : Math.floor(R() * ne)) * 5;
+    const x = edges[j], y = edges[j + 1], nx = edges[j + 2], ny = edges[j + 3], g = edges[j + 4];
+    const cd = R() < 0.5 ? -1 : 1;
+    let target = null;
+    if (g >= 0 && R() < p.reach) {
+      const left = byGlyph.get(g - 1), right = byGlyph.get(g + 1);
+      let pool = Math.abs(nx) > 0.3 ? (nx < 0 ? left : right) : (R() < 0.5 ? left : right);
+      pool = pool || left || right;
+      if (pool) {
+        let best = null, bd = Infinity;
+        for (let q = 0; q < 18; q++) {
+          const k = pool[Math.floor(R() * pool.length)] * 5;
+          const d = Math.hypot(edges[k] - x, edges[k + 1] - y);
+          if (d < bd) { bd = d; best = [edges[k], edges[k + 1]]; }
+        }
+        if (best && bd < S * (0.25 + p.threadLength * 1.4)) target = best;
+      }
     }
-  }
-}
-
-function scatterSpores(ctx, p, S, edges, ne, perimEm) {
-  const R = mulberry32((p.seed * 31 + 3) | 0);
-  const count = Math.round(Math.pow(p.spores, 1.4) * perimEm * 35);
-  for (let c = 0; c < count; c++) {
-    const [x, y, nx, ny] = pickEdge(R, edges, ne);
-    const a = Math.atan2(ny, nx) + (R() - 0.5) * 2.4;
-    const d = S * (0.015 + 0.12 * -Math.log(1 - R() * 0.995));
-    const r = S * (0.0025 + R() * R() * 0.009);
-    ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r, 0, Math.PI * 2); ctx.fill();
+    const len = target ? Math.hypot(target[0] - x, target[1] - y) * 1.6 : baseLen * (0.4 + R() * 0.6);
+    const w0 = W0 * (0.6 + R() * 0.6) * (target ? 1.1 : 1);
+    const a = target ? Math.atan2(target[1] - y, target[0] - x) * 0.5 + Math.atan2(ny, nx) * 0.5 + (R() - 0.5) * 0.6
+                     : Math.atan2(ny, nx) + (R() - 0.5) * 0.9;
+    pulls.push(x, y, nx, ny, w0);
+    const rootR = w0 * (0.5 + p.swell * 1.3);
+    ctx.beginPath(); ctx.arc(x - nx * rootR * 0.4, y - ny * rootR * 0.4, rootR, 0, Math.PI * 2); ctx.fill();
+    grow(x - nx * w0 * 0.3, y - ny * w0 * 0.3, a, len, w0, 0, target, cd);
   }
 }
 
